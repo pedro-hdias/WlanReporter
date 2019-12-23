@@ -62,17 +62,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		if wlan_ifaces.contents.NumberOfItems == 0:
 			ui.message(_("No wireless devices"))
+			wlanapi.WlanFreeMemory(wlan_ifaces)
 			return
 
 		for i in customResize(wlan_ifaces.contents.InterfaceInfo, wlan_ifaces.contents.NumberOfItems):
+			if i.isState != wlanapi.wlan_interface_state_connected:
+				ui.message(_("No wireless connections"))
+				continue
+
 			wlan_available_network_list = pointer(wlanapi.WLAN_AVAILABLE_NETWORK_LIST())
 			wlanapi.WlanGetAvailableNetworkList(self._client_handle, byref(i.InterfaceGuid), 0, None, byref(wlan_available_network_list))
 			for n in customResize(wlan_available_network_list.contents.Network, wlan_available_network_list.contents.NumberOfItems):
 				if n.Flags & wlanapi.WLAN_AVAILABLE_NETWORK_CONNECTED:
 					ui.message(_("Connected to {}, signal {}%, security type {}").format(n.dot11Ssid.SSID.decode(), n.wlanSignalQuality, SECURITY_TYPE.get(n.dot11DefaultAuthAlgorithm)))
 					break
-			else:
-				ui.message(_("No wireless connections"))
 			wlanapi.WlanFreeMemory(wlan_available_network_list)
 		wlanapi.WlanFreeMemory(wlan_ifaces)
 	script_wlanStatusReport.__doc__ = _("Reports the status of the wireless connection")

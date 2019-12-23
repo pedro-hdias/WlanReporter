@@ -13,6 +13,9 @@ wlan_notification_acm_interface_removal = 0x0000000e
 
 WLAN_AVAILABLE_NETWORK_CONNECTED = 1
 
+# State of the interface
+wlan_interface_state_connected = 1
+
 # Return codes
 ERROR_SUCCESS = 0
 
