@@ -1,6 +1,6 @@
 import os.path
 import winsound
-from ctypes import addressof, byref, pointer, wintypes
+from ctypes import addressof, byref, POINTER, wintypes
 
 import globalPluginHandler
 import addonHandler
@@ -57,7 +57,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		wlanapi.WlanRegisterNotification(self._client_handle, wlanapi.WLAN_NOTIFICATION_SOURCE_ACM, True, notifyHandler, None, None, None)
 
 	def script_wlanStatusReport(self, gesture):
-		wlan_ifaces = pointer(wlanapi.WLAN_INTERFACE_INFO_LIST())
+		wlan_ifaces = POINTER(wlanapi.WLAN_INTERFACE_INFO_LIST)()
 		wlanapi.WlanEnumInterfaces(self._client_handle, None, byref(wlan_ifaces))
 
 		if wlan_ifaces.contents.NumberOfItems == 0:
@@ -70,7 +70,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				ui.message(_("No wireless connections"))
 				continue
 
-			wlan_available_network_list = pointer(wlanapi.WLAN_AVAILABLE_NETWORK_LIST())
+			wlan_available_network_list = POINTER(wlanapi.WLAN_AVAILABLE_NETWORK_LIST)()
 			wlanapi.WlanGetAvailableNetworkList(self._client_handle, byref(i.InterfaceGuid), 0, None, byref(wlan_available_network_list))
 			for n in customResize(wlan_available_network_list.contents.Network, wlan_available_network_list.contents.NumberOfItems):
 				if n.Flags & wlanapi.WLAN_AVAILABLE_NETWORK_CONNECTED:
