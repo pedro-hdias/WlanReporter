@@ -4,6 +4,7 @@ from ctypes import addressof, byref, POINTER, wintypes
 
 import globalPluginHandler
 import addonHandler
+import queueHandler
 import ui
 import globalCommands
 from . import wlanapi
@@ -11,7 +12,8 @@ from . import wlanapi
 MODULE_DIR = os.path.dirname(__file__)
 addonHandler.initTranslation()
 
-def play(fileName):
+def message(text, fileName):
+	ui.message(text)
 	path = os.path.join(MODULE_DIR, fileName)
 	winsound.PlaySound(path, winsound.SND_ASYNC)
 
@@ -30,18 +32,14 @@ def notifyHandler(pData, pCtx):
 		return
 	if pData.contents.NotificationCode == wlanapi.wlan_notification_acm_connection_complete:
 		ssid = wlanapi.WLAN_CONNECTION_NOTIFICATION_DATA.from_address(pData.contents.pData).dot11Ssid.SSID
-		ui.message(_("Connected to {}").format(ssid.decode("utf-8")))
-		play("connect.wav")
+		queueHandler.queueFunction(queueHandler.eventQueue, message, _("Connected to {}").format(ssid.decode("utf-8")), "connect.wav")
 	elif pData.contents.NotificationCode == wlanapi.wlan_notification_acm_disconnected:
 		ssid = wlanapi.WLAN_CONNECTION_NOTIFICATION_DATA.from_address(pData.contents.pData).dot11Ssid.SSID
-		ui.message(_("Disconnected from {}").format(ssid.decode("utf-8")))
-		play("disconnect.wav")
+		queueHandler.queueFunction(queueHandler.eventQueue, message, _("Disconnected from {}").format(ssid.decode("utf-8")), "disconnect.wav")
 	elif pData.contents.NotificationCode == wlanapi.wlan_notification_acm_interface_arrival:
-		ui.message(_("A wireless device has been enabled"))
-		play("connect.wav")
+		queueHandler.queueFunction(queueHandler.eventQueue, message, _("A wireless device has been enabled"), "connect.wav")
 	elif pData.contents.NotificationCode == wlanapi.wlan_notification_acm_interface_removal:
-		ui.message(_("A wireless device has been disabled"))
-		play("disconnect.wav")
+		queueHandler.queueFunction(queueHandler.eventQueue, message, _("A wireless device has been disabled"), "disconnect.wav")
 
 def customResize(array, newSize):
 	return (array._type_ * newSize).from_address(addressof(array))
