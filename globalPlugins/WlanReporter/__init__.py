@@ -15,7 +15,8 @@ addonHandler.initTranslation()
 def message(text, fileName):
 	ui.message(text)
 	path = os.path.join(MODULE_DIR, fileName)
-	winsound.PlaySound(path, winsound.SND_ASYNC)
+	if os.path.exists(path):
+		winsound.PlaySound(path, winsound.SND_ASYNC)
 
 SECURITY_TYPE = {
 	wlanapi.DOT11_AUTH_ALGO_80211_OPEN: _("No authentication (Open)"),
