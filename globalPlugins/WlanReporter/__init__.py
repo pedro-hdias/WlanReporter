@@ -1,3 +1,5 @@
+# Copyright (C) 2019-2022 Alexander Linkov <kvark128@yandex.ru>
+
 import os.path
 import winsound
 from ctypes import addressof, byref, POINTER, wintypes
@@ -7,6 +9,7 @@ import addonHandler
 import queueHandler
 import ui
 import globalCommands
+from scriptHandler import script
 from . import wlanapi
 
 MODULE_DIR = os.path.dirname(__file__)
@@ -18,25 +21,16 @@ def message(text, fileName):
 	if os.path.exists(path):
 		winsound.PlaySound(path, winsound.SND_ASYNC)
 
-SECURITY_TYPE = {
-	wlanapi.DOT11_AUTH_ALGO_80211_OPEN: _("No authentication (Open)"),
-	wlanapi.DOT11_AUTH_ALGO_80211_SHARED_KEY: "WEP",
-	wlanapi.DOT11_AUTH_ALGO_WPA: "WPA-Enterprise",
-	wlanapi.DOT11_AUTH_ALGO_WPA_PSK: "WPA-PSK",
-	wlanapi.DOT11_AUTH_ALGO_RSNA: "WPA2-Enterprise",
-	wlanapi.DOT11_AUTH_ALGO_RSNA_PSK: "WPA2-PSK",
-}
-
 @wlanapi.WLAN_NOTIFICATION_CALLBACK
 def notifyHandler(pData, pCtx):
 	if pData.contents.NotificationSource != wlanapi.WLAN_NOTIFICATION_SOURCE_ACM:
 		return
 	if pData.contents.NotificationCode == wlanapi.wlan_notification_acm_connection_complete:
 		ssid = wlanapi.WLAN_CONNECTION_NOTIFICATION_DATA.from_address(pData.contents.pData).dot11Ssid.SSID
-		queueHandler.queueFunction(queueHandler.eventQueue, message, _("Connected to {}").format(ssid.decode("utf-8")), "connect.wav")
+		queueHandler.queueFunction(queueHandler.eventQueue, message, _("Connected to {ssid}").format(ssid=ssid.decode("utf-8")), "connect.wav")
 	elif pData.contents.NotificationCode == wlanapi.wlan_notification_acm_disconnected:
 		ssid = wlanapi.WLAN_CONNECTION_NOTIFICATION_DATA.from_address(pData.contents.pData).dot11Ssid.SSID
-		queueHandler.queueFunction(queueHandler.eventQueue, message, _("Disconnected from {}").format(ssid.decode("utf-8")), "disconnect.wav")
+		queueHandler.queueFunction(queueHandler.eventQueue, message, _("Disconnected from {ssid}").format(ssid=ssid.decode("utf-8")), "disconnect.wav")
 	elif pData.contents.NotificationCode == wlanapi.wlan_notification_acm_interface_arrival:
 		queueHandler.queueFunction(queueHandler.eventQueue, message, _("A wireless device has been enabled"), "connect.wav")
 	elif pData.contents.NotificationCode == wlanapi.wlan_notification_acm_interface_removal:
@@ -55,6 +49,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		wlanapi.WlanOpenHandle(wlanapi.CLIENT_VERSION_WINDOWS_VISTA_OR_LATER, None, byref(self._negotiated_version), byref(self._client_handle))
 		wlanapi.WlanRegisterNotification(self._client_handle, wlanapi.WLAN_NOTIFICATION_SOURCE_ACM, True, notifyHandler, None, None, None)
 
+	@script(description=_("Reports the status of the wireless connection"))
 	def script_wlanStatusReport(self, gesture):
 		wlan_ifaces = POINTER(wlanapi.WLAN_INTERFACE_INFO_LIST)()
 		wlanapi.WlanEnumInterfaces(self._client_handle, None, byref(wlan_ifaces))
@@ -73,11 +68,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			wlanapi.WlanGetAvailableNetworkList(self._client_handle, byref(i.InterfaceGuid), 0, None, byref(wlan_available_network_list))
 			for n in customResize(wlan_available_network_list.contents.Network, wlan_available_network_list.contents.NumberOfItems):
 				if n.Flags & wlanapi.WLAN_AVAILABLE_NETWORK_CONNECTED:
-					ui.message(_("Connected to {}, signal {}%, security type {}").format(n.dot11Ssid.SSID.decode(), n.wlanSignalQuality, SECURITY_TYPE.get(n.dot11DefaultAuthAlgorithm)))
+					ui.message(_("Connected to {ssid}, signal {signal}%").format(ssid=n.dot11Ssid.SSID.decode(), signal=n.wlanSignalQuality))
 					break
 			wlanapi.WlanFreeMemory(wlan_available_network_list)
 		wlanapi.WlanFreeMemory(wlan_ifaces)
-	script_wlanStatusReport.__doc__ = _("Reports the status of the wireless connection")
 
 	def terminate(self):
 		wlanapi.WlanCloseHandle(self._client_handle, None)
